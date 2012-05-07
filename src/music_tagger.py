@@ -51,7 +51,7 @@ class MusicTagger(object):
         # TODO: !3 Error handling of unparseable int
         self._rating = int(options.rating)
         # TODO: !3 Error handling of non-csv tags
-        self._tags = options.csv_tags.split(',')
+        self._tags = options.csv_tags.split(',') if options.csv_tags else []
         self._music_root = options.music_root
         self._db_loc = options.db_loc
         self._debug = options.debug

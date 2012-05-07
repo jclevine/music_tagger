@@ -10,7 +10,7 @@ class MusicTaggerDBHandler(object):
         song_id = self._get_song_id(song_obj)
 
         # TODO: !3 Make function for rating and tags.
-        if not self._song_id_in_rating(song_id):
+        if song_id and not self._song_id_in_rating(song_id):
             query = """
                     INSERT INTO music_rating
                               ( song_id
@@ -22,7 +22,10 @@ class MusicTaggerDBHandler(object):
                               )
                     """
             values = (song_id, rating)
-            self._cursor.execute(query, values)
+            try:
+                self._cursor.execute(query, values)
+            except Exception as e:
+                print(values)
 
         # TODO: !3 Make function for rating and tags.
         for tag in tags:
@@ -56,7 +59,7 @@ class MusicTaggerDBHandler(object):
         rs = self._cursor.execute(query, values)
         song_id = rs.fetchone()
         rs.close()
-        return song_id
+        return song_id[0] if song_id else None
 
     def _song_id_in_rating(self, song_id):
         query = """
