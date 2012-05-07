@@ -3,9 +3,9 @@ from optparse import OptionParser
 import logging
 import os
 import sqlite3
-from src.music_tagger_db_handler import MusicTaggerDBHandler
 import song as song_entity
 from music_map_exceptions import UnparseableSongError
+from music_tagger_db_handler import MusicTaggerDBHandler
 
 
 class MusicTagger(object):
