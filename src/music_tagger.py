@@ -2,9 +2,10 @@
 from optparse import OptionParser
 import logging
 import os
-import unicodedata
 import sqlite3
 from src.music_tagger_db_handler import MusicTaggerDBHandler
+import song as song_entity
+from music_map_exceptions import UnparseableSongError
 
 
 class MusicTagger(object):
@@ -18,7 +19,7 @@ class MusicTagger(object):
         self._cursor.execute('PRAGMA count_changes=OFF')
         self._cursor.execute('PRAGMA journal_mode=MEMORY')
         self._cursor.execute('PRAGMA temp_store=MEMORY')
-        self._db_handler = MusicTaggerDBHandler(self._conn)
+        self._db_handler = MusicTaggerDBHandler(self._cursor)
         self._validate()
         self._song_set = self._build_song_set()
         self._music_map = self._tag_music()
@@ -47,9 +48,10 @@ class MusicTagger(object):
 
         options = parser.parse_args()[0]
         self._playlist_loc = os.path.abspath(options.playlist_loc)
-        # TODO: !# Error handling of unparseable int
+        # TODO: !3 Error handling of unparseable int
         self._rating = int(options.rating)
-        self._tags = self._parse_tags(options.csv_tags)
+        # TODO: !3 Error handling of non-csv tags
+        self._tags = options.csv_tags.split(',')
         self._music_root = options.music_root
         self._db_loc = options.db_loc
         self._debug = options.debug
@@ -103,13 +105,8 @@ class MusicTagger(object):
     # TODO: !2 Handle exceptions consistently and with appropriate logging,
     # especially for unparseable stuff.
     # TODO: !2 Threading?
-    def _build_music_map(self):
+    def _tag_music(self):
         num_songs = len(self._song_set)
-        cursor = self._conn.cursor()
-        cursor.execute('PRAGMA synchronous=OFF')
-        cursor.execute('PRAGMA count_changes=OFF')
-        cursor.execute('PRAGMA journal_mode=MEMORY')
-        cursor.execute('PRAGMA temp_store=MEMORY')
         for i, song in enumerate(self._song_set):
             try:
                 song_obj = song_entity.Song(song)
@@ -122,84 +119,12 @@ class MusicTagger(object):
                 if i % 100 == 0 or i == num_songs - 1:
                     self._logger.info("{0}/{1}".format(i + 1, num_songs))
 
-            self._db_handler.insert_song(cursor, song_obj, self._music_root)
-        cursor.close()
-
-    # TODO: !3 Put into a utility function somewhere.
-    @staticmethod
-    def sanitize_string(s, remove_the=False, remove_and=False):
-        s = s.lower()
-        s = s.replace("_", " ")
-        s = s.replace(".", "")
-        s = s.replace("-", " ")
-        s = s.replace("(", "")
-        s = s.replace(")", "")
-        if remove_the:
-            s = s.replace(" the", "")
-            s = s.replace("the ", "")
-
-        if remove_and:
-            s = s.replace("& ", "")
-            s = s.replace(" &", "")
-            s = s.replace("and ", "")
-            s = s.replace(" and", "")
-        # Change special characters into their somewhat normal equivalent
-        s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
-        s = s.rstrip()
-        return s
-
-    def get_by_track(self, artist, album, track):
-        ss = MusicMap.sanitize_string
-        if ss(artist, remove_and=True, remove_the=True) not in self._music_map:
-            raise KeyError("Unable to find artist {0}".format(artist))
-        albums = self._music_map[ss(artist, remove_and=True, remove_the=True)]
-
-        if ss(album) not in albums:
-            raise KeyError("Unable to find album {0} from artist {1}"
-                           .format(album, artist))
-        tracks = albums[ss(album)]
-
-        if ss(track) not in tracks:
-            raise KeyError("Unable to find track {track} from album {album} " \
-                           "from artist {artist}"
-                           .format(track=track,
-                                   album=album,
-                                   artist=artist))
-        return albums[ss(album)][ss(track)]
-
-    def get_by_title(self, artist, album, title):
-        ss = MusicMap.sanitize_string
-        if ss(artist, remove_and=True, remove_the=True) not in self._music_map:
-            raise KeyError("Unable to find artist {0}".format(artist))
-        albums = self._music_map[ss(artist, remove_and=True, remove_the=True)]
-
-        if ss(album) not in albums:
-            raise KeyError("Unable to find album {0} from artist {1}"
-                           .format(album, artist))
-        tracks = albums[ss(album)]
-
-        for _, existing_title in tracks.items():
-            if ss(title) == existing_title:
-                return existing_title
-        raise KeyError("Unable to find title {title} from album {album} " \
-                       "from artist {artist}"
-                       .format(title=title,
-                               album=album,
-                               artist=artist))
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        self._index = self._index + 1
-        if self._index >= len(self._all_tracks):
-            raise StopIteration
-        else:
-            return self._all_tracks[self._index]
+            self._db_handler.insert_rating_and_tags(song_obj, self._rating, self._tags)
+        self._db_handler.close()
 
 
 def main():
-    MusicMap()
+    MusicTagger()
 
 
 if __name__ == "__main__":
