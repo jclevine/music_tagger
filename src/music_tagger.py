@@ -49,7 +49,11 @@ class MusicTagger(object):
         options = parser.parse_args()[0]
         self._playlist_loc = os.path.abspath(options.playlist_loc)
         # TODO: !3 Error handling of unparseable int
-        self._rating = int(options.rating)
+        if options.rating:
+            self._rating = int(options.rating)
+        else:
+            self._rating = None
+
         # TODO: !3 Error handling of non-csv tags
         self._tags = options.csv_tags.split(',') if options.csv_tags else []
         self._music_root = options.music_root
