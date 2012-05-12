@@ -39,9 +39,11 @@ class MusicTagger(object):
                                "the songs in the playlist.", metavar="TAGS")
         # TODO: !2 Be able to define multiple music_roots, since there might
         # be more than 1 in a playlist.
-        parser.add_option("--music_root", dest="music_root",
+        parser.add_option("--music_roots", dest="music_roots_csv",
                           help="The full path to the root of the music tree " \
-                               "inside the playlist.", metavar="ROOT_PATH")
+                               "inside the playlist. This is a comma-delimited " \
+                               "value that may contain all the roots in the " \
+                               "playlist.", metavar="ROOT_PATHS")
         parser.add_option("-d", "--debug", action="store_true", dest="debug",
                            help="Set this flag if you want logging " \
                                 "to be set to debug.", default=False)
@@ -58,7 +60,7 @@ class MusicTagger(object):
 
         # TODO: !3 Error handling of non-csv tags
         self._tags = options.csv_tags.split(',') if options.csv_tags else []
-        self._music_root = options.music_root
+        self._music_roots = options.music_roots_csv.split(',')
         self._db_loc = options.db_loc
         self._debug = options.debug
 
@@ -116,7 +118,7 @@ class MusicTagger(object):
         num_songs = len(self._song_set)
         for i, song in enumerate(self._song_set):
             try:
-                song_obj = song_entity.Song(song)
+                song_obj = song_entity.Song(song, self._music_roots)
             except UnparseableSongError:
                 self._logger.debug("Error parsing info out of '{0}'. Continuing."
                                    .format(song))
