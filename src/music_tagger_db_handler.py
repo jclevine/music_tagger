@@ -1,4 +1,5 @@
 # TODO: !3 Go through all queries and make them simpler, perhaps without cursors and rs's.
+import logging
 
 
 class MusicTaggerDBHandler(object):
@@ -9,6 +10,9 @@ class MusicTaggerDBHandler(object):
     def insert_rating_and_tags(self, song_obj, rating, tags):
         song_id = self._get_song_id(song_obj)
 
+        if not song_id:
+            logging.getLogger('music_tagger').warning('Song does not exist in DB: {0}'
+                                                      .format(str(song_obj)))
         # TODO: !3 Make function for rating and tags.
         if rating:
             if song_id and not self._song_id_in_rating(song_id):
@@ -68,7 +72,7 @@ class MusicTaggerDBHandler(object):
                 """
         values = (song_id,)
         rs = self._cursor.execute(query, values)
-        num_rows = rs.fetchone()
+        num_rows = rs.fetchone()[0]
         rs.close()
         return num_rows == 1
 
@@ -81,7 +85,7 @@ class MusicTaggerDBHandler(object):
                 """
         values = (song_id, tag)
         rs = self._cursor.execute(query, values)
-        num_rows = rs.fetchone()
+        num_rows = rs.fetchone()[0]
         rs.close()
         return num_rows == 1
 

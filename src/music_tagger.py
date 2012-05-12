@@ -37,6 +37,8 @@ class MusicTagger(object):
         parser.add_option('-t', "--tags", dest="csv_tags",
                           help="A comma-delimited list of tags to give all " \
                                "the songs in the playlist.", metavar="TAGS")
+        # TODO: !2 Be able to define multiple music_roots, since there might
+        # be more than 1 in a playlist.
         parser.add_option("--music_root", dest="music_root",
                           help="The full path to the root of the music tree " \
                                "inside the playlist.", metavar="ROOT_PATH")
