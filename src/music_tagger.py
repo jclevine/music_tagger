@@ -109,6 +109,7 @@ class MusicTagger(object):
     # TODO: !2 Handle exceptions consistently and with appropriate logging,
     # especially for unparseable stuff.
     # TODO: !2 Threading?
+    # TODO: Make a decorator to handle the progress logging?
     def _tag_music(self):
         num_songs = len(self._song_set)
         for i, song in enumerate(self._song_set):

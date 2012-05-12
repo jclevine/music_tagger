@@ -23,10 +23,8 @@ class MusicTaggerDBHandler(object):
                                   )
                         """
                 values = (song_id, rating)
-                try:
-                    self._cursor.execute(query, values)
-                except Exception as e:
-                    print(values)
+                # TODO: !2 Try/except here.
+                self._cursor.execute(query, values)
 
         # TODO: !3 Make function for rating and tags.
         for tag in tags:
