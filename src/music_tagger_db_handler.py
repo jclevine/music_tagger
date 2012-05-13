@@ -2,6 +2,7 @@
 import logging
 import difflib
 
+
 class MusicTaggerDBHandler(object):
 
     def __init__(self, cursor):
@@ -77,117 +78,12 @@ class MusicTaggerDBHandler(object):
             title_similarity = difflib.SequenceMatcher(None, match['title_key'], song_obj.title_key).ratio()
 
             # Only the exact artist's tracks, so we can be a bit lenient with the album and title.
-            if album_similarity > 0.4 or \
-               title_similarity > 0.4 or \
-               (album_similarity > 0.3 and title_similarity > 0.3):
+            if album_similarity > 0.9 or \
+               title_similarity > 0.9 or \
+               (album_similarity > 0.8 and title_similarity > 0.8):
                 return match['song_id']
 
-        for part_of_artist in song_obj.artist_key.split(' '):
-
-            # Get all the songs by artist parts/track
-            query = """
-                    SELECT s.song_id
-                         , s.artist_key
-                         , s.album_key
-                         , s.title_key
-                      FROM song s
-                     WHERE s.artist_key like ?
-                       AND s.track_key  = ?
-                    """
-            values = ('%' + part_of_artist + '%',
-                      song_obj.track_key)
-
-            rs = self._cursor.execute(query, values)
-
-            matches = []
-            for row in rs:
-                matches.append({'song_id': row[0],
-                                'artist_key': row[1],
-                                'album_key': row[2],
-                                'title_key': row[3]})
-
-            for match in matches:
-                album_similarity = difflib.SequenceMatcher(None, match['album_key'], song_obj.album_key).ratio()
-                title_similarity = difflib.SequenceMatcher(None, match['title_key'], song_obj.title_key).ratio()
-
-                # This will be a larger list of artist's for this track. Let's be a bit more strict.
-                if album_similarity > 0.7 or \
-                   title_similarity > 0.7 or \
-                   (album_similarity > 0.5 and title_similarity > 0.5):
-                    return match['song_id']
-
-        for part_of_album in song_obj.album_key.split(' '):
-
-            # Get all the songs by artist parts/track
-            query = """
-                    SELECT s.song_id
-                         , s.artist_key
-                         , s.album_key
-                         , s.title_key
-                      FROM song s
-                     WHERE s.album_key like ?
-                       AND s.track_key  = ?
-                    """
-            values = ('%' + part_of_album + '%',
-                      song_obj.track_key)
-
-            rs = self._cursor.execute(query, values)
-
-            matches = []
-            for row in rs:
-                matches.append({'song_id': row[0],
-                                'artist_key': row[1],
-                                'album_key': row[2],
-                                'title_key': row[3]})
-
-            for match in matches:
-                album_similarity = difflib.SequenceMatcher(None, match['album_key'], song_obj.album_key).ratio()
-                title_similarity = difflib.SequenceMatcher(None, match['title_key'], song_obj.title_key).ratio()
-
-                # Again, this is probably even less likely to be the same since there are a lot
-                # of albums with similar names.
-                if album_similarity > 0.7 or \
-                   title_similarity > 0.7 or \
-                   (album_similarity > 0.5 and title_similarity > 0.5):
-                    return match['song_id']
-
         return None
-
-#        # First try the artist, album, track combo
-#        query = """
-#                SELECT s.song_id
-#                  FROM song s
-#                 WHERE s.artist_key = ?
-#                   AND s.album_key  = ?
-#                   AND s.track_key  = ?
-#                """
-#        values = (song_obj.artist_key,
-#                  song_obj.album_key,
-#                  song_obj.track_key)
-#        rs = self._cursor.execute(query, values)
-#        song_id = rs.fetchone()
-#        rs.close()
-#
-#        if song_id:
-#            return song_id[0]
-#
-#        # Otherwise try just album and track
-#        query = """
-#                SELECT s.song_id
-#                  FROM song s
-#                 WHERE s.album_key  = ?
-#                   AND s.track_key  = ?
-#                """
-#        values = (song_obj.album_key,
-#                  song_obj.track_key)
-#        rs = self._cursor.execute(query, values)
-#        song_id = rs.fetchone()
-#        rs.close()
-#
-#        if song_id:
-#            return song_id[0]
-#
-#        return None
 
     def _song_id_in_rating(self, song_id):
         query = """
