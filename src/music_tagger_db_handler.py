@@ -55,10 +55,10 @@ class MusicTaggerDBHandler(object):
                    AND s.track_key  = ?
                    AND s.title_key  = ?
                 """
-        values = (song_obj.artist,
-                  song_obj.album,
-                  song_obj.track,
-                  song_obj.title)
+        values = (song_obj.artist_key,
+                  song_obj.album_key,
+                  song_obj.track_key,
+                  song_obj.title_key)
         rs = self._cursor.execute(query, values)
         song_id = rs.fetchone()
         rs.close()

@@ -10,8 +10,18 @@ from music_tagger_db_handler import MusicTaggerDBHandler
 
 class MusicTagger(object):
 
-    def __init__(self):
-        self._parse_options()
+    def __init__(self, *args):
+        if not args:
+            self._parse_options()
+        else:
+            kwargs = args[0]
+            self._playlist_loc = kwargs['playlist_loc']
+            self._rating = kwargs['rating']
+            self._tags = kwargs['tags']
+            self._music_root = kwargs['music_root']
+            self._db_loc = kwargs['db_loc']
+            self._debug = kwargs['debug']
+
         self._handle_logging(self._debug)
         self._conn = sqlite3.connect(self._db_loc)
         self._cursor = self._conn.cursor()
@@ -111,12 +121,12 @@ class MusicTagger(object):
     # TODO: !2 Handle exceptions consistently and with appropriate logging,
     # especially for unparseable stuff.
     # TODO: !2 Threading?
-    # TODO: Make a decorator to handle the progress logging?
+    # TODO: !3 Make a decorator to handle the progress logging?
     def _tag_music(self):
         num_songs = len(self._song_set)
         for i, song in enumerate(self._song_set):
             try:
-                song_obj = song_entity.Song(song)
+                song_obj = song_entity.Song(song, [self._music_root])
             except UnparseableSongError:
                 self._logger.debug("Error parsing info out of '{0}'. Continuing."
                                    .format(song))
