@@ -10,6 +10,7 @@ class MusicTaggerDBHandler(object):
     def insert_rating_and_tags(self, song_obj, rating, tags):
         song_id = self._get_song_id(song_obj)
 
+        # TODO: !2 Warn, but insert it.
         if not song_id:
             logging.getLogger('music_tagger').warning('Song does not exist in DB: {0}'
                                                       .format(str(song_obj)))
@@ -61,7 +62,6 @@ class MusicTaggerDBHandler(object):
                   song_obj.title_key)
         rs = self._cursor.execute(query, values)
         song_id = rs.fetchone()
-        rs.close()
         return song_id[0] if song_id else None
 
     def _song_id_in_rating(self, song_id):
@@ -73,7 +73,6 @@ class MusicTaggerDBHandler(object):
         values = (song_id,)
         rs = self._cursor.execute(query, values)
         num_rows = rs.fetchone()[0]
-        rs.close()
         return num_rows == 1
 
     def _song_id_and_tag_in_tags(self, song_id, tag):
@@ -86,7 +85,6 @@ class MusicTaggerDBHandler(object):
         values = (song_id, tag)
         rs = self._cursor.execute(query, values)
         num_rows = rs.fetchone()[0]
-        rs.close()
         return num_rows == 1
 
     def close(self):

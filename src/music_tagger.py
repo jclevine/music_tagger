@@ -14,27 +14,33 @@ class MusicTagger(object):
         if not args:
             self._parse_options()
         else:
+            # TODO: !3 Put this in a function.
             kwargs = args[0]
             self._playlist_loc = kwargs['playlist_loc']
             self._rating = kwargs['rating']
             self._tags = kwargs['tags']
-            self._music_root = kwargs['music_root']
+            self._music_roots = kwargs['music_roots']
             self._db_loc = kwargs['db_loc']
             self._debug = kwargs['debug']
 
-        self._handle_logging(self._debug)
-        self._conn = sqlite3.connect(self._db_loc)
-        self._cursor = self._conn.cursor()
-        self._cursor.execute('PRAGMA synchronous=OFF')
-        self._cursor.execute('PRAGMA count_changes=OFF')
-        self._cursor.execute('PRAGMA journal_mode=MEMORY')
-        self._cursor.execute('PRAGMA temp_store=MEMORY')
-        self._db_handler = MusicTaggerDBHandler(self._cursor)
-        self._validate()
-        self._song_set = self._build_song_set()
-        self._music_map = self._tag_music()
-        self._conn.commit()
-        self._conn.close()
+        try:
+            self._handle_logging(self._debug)
+            self._conn = sqlite3.connect(self._db_loc)
+            # TODO: !2 Do we really want to pass around a cursor?
+            self._cursor = self._conn.cursor()
+            self._cursor.execute('PRAGMA synchronous=OFF')
+            self._cursor.execute('PRAGMA count_changes=OFF')
+            self._cursor.execute('PRAGMA journal_mode=MEMORY')
+            self._cursor.execute('PRAGMA temp_store=MEMORY')
+            self._db_handler = MusicTaggerDBHandler(self._cursor)
+            self._validate()
+            self._song_set = self._build_song_set()
+            self._music_map = self._tag_music()
+        finally:
+            self._cursor.close()
+            self._conn.commit()
+            self._conn.close()
+            self._close_logging_handlers()
 
     def _parse_options(self):
         parser = OptionParser()
@@ -47,11 +53,10 @@ class MusicTagger(object):
         parser.add_option('-t', "--tags", dest="csv_tags",
                           help="A comma-delimited list of tags to give all " \
                                "the songs in the playlist.", metavar="TAGS")
-        # TODO: !2 Be able to define multiple music_roots, since there might
-        # be more than 1 in a playlist.
-        parser.add_option("--music_root", dest="music_root",
-                          help="The full path to the root of the music tree " \
-                               "inside the playlist.", metavar="ROOT_PATH")
+        parser.add_option("--music_roots", dest="music_roots_csv",
+                          help="The csv of full paths to the root of the music trees " \
+                               "inside the playlist. Do not include ending /.",
+                               metavar="ROOT_PATHS_CSV")
         parser.add_option("-d", "--debug", action="store_true", dest="debug",
                            help="Set this flag if you want logging " \
                                 "to be set to debug.", default=False)
@@ -68,7 +73,7 @@ class MusicTagger(object):
 
         # TODO: !3 Error handling of non-csv tags
         self._tags = options.csv_tags.split(',') if options.csv_tags else []
-        self._music_root = options.music_root
+        self._music_roots = options.music_roots_csv.split(',')
         self._db_loc = options.db_loc
         self._debug = options.debug
 
@@ -97,9 +102,9 @@ class MusicTagger(object):
         unparseable_handler.setLevel(logging.DEBUG)
         self._unparseable.addHandler(unparseable_handler)
 
-        self._unknown_error = logging.getLogger("unknown_error")
+        self._unknown_error = logging.getLogger("unknown_tagger_error")
         self._unknown_error.setLevel(logging.DEBUG)
-        unknown_error_handler = logging.FileHandler("unknown_error.log", mode="w")
+        unknown_error_handler = logging.FileHandler("unknown_tagger_error.log", mode="w")
         unknown_error_handler.setLevel(logging.DEBUG)
         self._unknown_error.addHandler(unknown_error_handler)
 
@@ -126,7 +131,7 @@ class MusicTagger(object):
         num_songs = len(self._song_set)
         for i, song in enumerate(self._song_set):
             try:
-                song_obj = song_entity.Song(song, [self._music_root])
+                song_obj = song_entity.Song(song, self._music_roots)
             except UnparseableSongError:
                 self._logger.debug("Error parsing info out of '{0}'. Continuing."
                                    .format(song))
@@ -138,6 +143,14 @@ class MusicTagger(object):
 
             self._db_handler.insert_rating_and_tags(song_obj, self._rating, self._tags)
         self._db_handler.close()
+
+    def _close_logging_handlers(self):
+        for handler in self._logger.handlers:
+            handler.close()
+        for handler in self._unparseable.handlers:
+            handler.close()
+        for handler in self._unknown_error.handlers:
+            handler.close()
 
 
 def main():
