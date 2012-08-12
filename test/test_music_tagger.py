@@ -87,6 +87,17 @@ class MusicTaggerTest(unittest.TestCase):
             row = tag_cursor.fetchone()
             self.assertEqual('tag1', row[0])
 
+            rating_cursor = conn.cursor()
+            rating_query = """
+                            SELECT rating
+                              FROM music_rating mr
+                             WHERE mr.song_id = ?
+                 """
+            rating_values = (str(song_id))
+            rating_cursor.execute(rating_query, rating_values)
+            row = rating_cursor.fetchone()
+            self.assertEqual(1, row[0])
+
         finally:
             conn.close()
 
