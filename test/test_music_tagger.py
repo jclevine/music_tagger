@@ -3,11 +3,11 @@ import music_map_db
 import os
 import music_tagger
 import music_map
-import test_utils as mm_test_utils
 import sqlite3
 from util import sqlite_utils
 
 
+# TODO: !2 Get 100% coverage
 class MusicTaggerTest(unittest.TestCase):
     TEST_LOC = r'c:\_src\music_tagger\test'
     TEST_DATA_LOC = os.path.join(TEST_LOC, 'data')
@@ -24,6 +24,7 @@ class MusicTaggerTest(unittest.TestCase):
         os.remove('music_map.log')
         os.remove(self.TEST_DB_LOC)
 
+    # TODO: !3 Rip out some common stuff, even with music_map
     def test_simple(self):
         try:
             # First get all the songs into the song/music_map DB.

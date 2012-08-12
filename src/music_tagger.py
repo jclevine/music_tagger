@@ -12,7 +12,7 @@ class MusicTagger(object):
 
     def __init__(self, *args):
         if not args:
-            self._parse_options()
+            self._parse_options()  # pragma: no cover
         else:
             # TODO: !3 Put this in a function.
             kwargs = args[0]
@@ -42,7 +42,7 @@ class MusicTagger(object):
             self._conn.close()
             self._close_logging_handlers()
 
-    def _parse_options(self):
+    def _parse_options(self):  # pragma: no cover
         parser = OptionParser()
         parser.add_option("-p", "--playlist", dest="playlist_loc",
                            help="Location of the playlist you want to make a " \
