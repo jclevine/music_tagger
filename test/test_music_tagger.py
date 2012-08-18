@@ -20,12 +20,13 @@ class MusicTaggerTest(unittest.TestCase):
     def tearDown(self):
         os.remove('music_tagger.log')
         os.remove('unknown_error.log')
+        os.remove('unknown_tagger_error.log')
         os.remove('unparseable.log')
         os.remove('music_map.log')
         os.remove(self.TEST_DB_LOC)
 
     # TODO: !3 Rip out some common stuff, even with music_map
-    def test_simple(self):
+    def test_simple_one_rating_one_tag(self):
         try:
             # First get all the songs into the song/music_map DB.
             song_source_playlist = os.path.join(self.TEST_DATA_LOC, 'test_simple_playlist_source.m3u8')
@@ -99,6 +100,62 @@ class MusicTaggerTest(unittest.TestCase):
             row = rating_cursor.fetchone()
             self.assertEqual(1, row[0])
 
+        finally:
+            conn.close()
+
+    def test_one_rating_2_tags(self):
+        try:
+            # First get all the songs into the song/music_map DB.
+            song_source_playlist = os.path.join(self.TEST_DATA_LOC, 'test_simple_playlist_source.m3u8')
+            music_map_params = {'playlist_loc': song_source_playlist,
+                                'music_roots': ['./somewhere_else'],
+                                'db_loc': self.TEST_DB_LOC,
+                                'debug': False}
+            music_map.MusicMap(music_map_params)
+            tagger_params = {'playlist_loc': os.path.join(self.TEST_DATA_LOC, 'test_simple_playlist.m3u8'),
+                             'rating': 1,
+                             'tags': ['tag1', 'tag2'],
+                             'music_roots': ['.'],
+                             'db_loc': self.TEST_DB_LOC,
+                             'debug': False}
+            music_tagger.MusicTagger(tagger_params)
+
+            # TODO: !3 Reuse music map's insert into music map test util
+            # TODO: !3 Have util functions to get all rows of all possible tables.
+            conn = sqlite3.connect(self.TEST_DB_LOC)
+            song_cursor = conn.cursor()
+            song_query = """
+                    SELECT song_id
+                         , artist_key
+                         , album_key
+                         , track_key
+                         , title_key
+                      FROM song
+                    """
+            song_rs = song_cursor.execute(song_query)
+            song_rows = sqlite_utils.name_columns(song_rs)
+            song_id = None
+            for row in song_rows:
+                song_id = row['song_id']
+                self.assertEqual('artist', row['artist_key'])
+                self.assertEqual('album', row['album_key'])
+                self.assertEqual('01', row['track_key'])
+                self.assertEqual('track title', row['title_key'])
+
+            tag_cursor = conn.cursor()
+            tag_query = """
+                        SELECT tag
+                          FROM music_tag mt
+                         WHERE mt.song_id = ?
+                 """
+            tag_values = (str(song_id))
+            rs = tag_cursor.execute(tag_query, tag_values)
+            tag_rows = sqlite_utils.name_columns(rs)
+
+            expected_tags = ['tag1', 'tag2']
+            actual_tags = [row['tag'] for row in tag_rows]
+            missed_tags = filter(lambda tag: tag not in actual_tags, expected_tags)
+            self.assertEquals(0, len(missed_tags))
         finally:
             conn.close()
 
